@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Just Fade Academy — Elite Basketball Development</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+
+/* ─────────────────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: #080808;
+  color: #f2f0ec;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --black:       #080808;
+  --white:       #f2f0ec;
+  --gray-1:      #111111;
+  --gray-2:      #1e1e1e;
+  --gray-3:      #2e2e2e;
+  --gray-4:      #b8b8b8;
+  --gray-5:      #ececec;
+  --gray-6:      #d8d8d5;
+  --gray-7:      #e8e8e5;
+  --accent:      #d97757;
+  --accent-dim:  rgba(217,119,87,0.10);
+  --accent-bdr:  rgba(217,119,87,0.25);
+
+  --font-disp:   'Bebas Neue', sans-serif;
+  --font-serif:  'Cormorant Garamond', serif;
+  --font-body:   'DM Sans', sans-serif;
+
+  --pad:   clamp(2rem, 5vw, 5.5rem);
+  --ease:  cubic-bezier(0.16, 1, 0.3, 1);
+  --dur:   0.65s;
+}
+
+/* ─────────────────────────────────────────────────────
+   SLIDE SYSTEM — absolute stack, JS toggles .active
+───────────────────────────────────────────────────── */
+.slide {
+  position: absolute; inset: 0;
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--black);
+  /* hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(40px);
+  transition: opacity var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
+  z-index: 1;
+}
+.slide.active {
+  opacity: 1; pointer-events: all; transform: translateY(0); z-index: 10;
+}
+.slide.exit-up   { opacity: 0; transform: translateY(-40px); z-index: 5; pointer-events: none; }
+.slide.exit-down { opacity: 0; transform: translateY( 40px); z-index: 5; pointer-events: none; }
+
+/* ─────────────────────────────────────────────────────
+   STAGGER REVEALS
+───────────────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(22px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.slide.active .reveal        { opacity: 1; transform: none; }
+.slide.active .reveal.d1     { transition-delay: .05s; }
+.slide.active .reveal.d2     { transition-delay: .18s; }
+.slide.active .reveal.d3     { transition-delay: .30s; }
+.slide.active .reveal.d4     { transition-delay: .42s; }
+.slide.active .reveal.d5     { transition-delay: .54s; }
+.slide.active .reveal.d6     { transition-delay: .66s; }
+.reveal-blur {
+  opacity: 0; filter: blur(8px);
+  transition: opacity 1s var(--ease), filter 1s var(--ease);
+  transition-delay: .5s;
+}
+.slide.active .reveal-blur   { opacity: 1; filter: blur(0); }
+
+/* ─────────────────────────────────────────────────────
+   FIXED CHROME (progress / logos / counter / dots / arrows)
+───────────────────────────────────────────────────── */
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 1.5px;
+  background: var(--accent); z-index: 800;
+  transition: width .4s var(--ease); width: 0%;
+}
+
+/* Top-left watermark */
+.logo-tl {
+  position: fixed;
+  top: clamp(16px,2.2vh,28px); left: clamp(18px,3vw,40px);
+  z-index: 700; width: clamp(28px,3.2vw,44px); opacity: .55; pointer-events: none;
+}
+.logo-tl img { width: 100%; display: block; }
+
+/* Top-right watermark — hidden on slide 1 */
+.logo-tr {
+  position: fixed;
+  top: clamp(16px,2.2vh,28px); right: clamp(18px,3vw,40px);
+  z-index: 700; width: clamp(28px,3.2vw,44px); opacity: .55;
+  pointer-events: none; transition: opacity .3s;
+}
+.logo-tr img { width: 100%; display: block; }
+body.on-s1 .logo-tr { opacity: 0; }
+
+/* Bottom-left confidential */
+.confidential {
+  position: fixed; bottom: clamp(16px,2.5vh,28px); left: clamp(20px,2.5vw,36px);
+  z-index: 700; font-family: var(--font-body);
+  font-size: clamp(.58rem,.72vw,.68rem); color: var(--gray-4); letter-spacing: .15em;
+}
+
+/* Bottom-right counter */
+.counter {
+  position: fixed; bottom: clamp(16px,2.5vh,28px); right: clamp(20px,2.5vw,36px);
+  z-index: 700; font-family: var(--font-body);
+  font-size: clamp(.58rem,.72vw,.68rem); color: var(--gray-4); letter-spacing: .2em;
+}
+
+/* Right-center nav dots */
+.nav-dots {
+  position: fixed; right: clamp(14px,1.8vw,24px); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 10px; z-index: 700;
+}
+.nd {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gray-3); cursor: pointer; border: none; padding: 0;
+  transition: all .3s ease; position: relative;
+}
+.nd.active { background: var(--accent); transform: scale(1.9); }
+.nd:hover  { background: var(--gray-4); transform: scale(1.5); }
+.nd::after {
+  content: attr(data-title);
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  background: rgba(8,8,8,.92); color: var(--white);
+  font-family: var(--font-body); font-size: clamp(.58rem,.72vw,.66rem);
+  letter-spacing: .05em; padding: 4px 10px; border: 1px solid var(--gray-3);
+  white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.nd:hover::after { opacity: 1; }
+
+/* Bottom-center arrow buttons */
+.nav-arrows {
+  position: fixed; bottom: clamp(16px,2.5vh,28px); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px; z-index: 700;
+}
+.arw {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--gray-3); background: transparent;
+  color: var(--gray-4); cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .25s ease;
+}
+.arw:hover { border-color: var(--accent-bdr); color: var(--accent); background: var(--accent-dim); }
+
+/* ─────────────────────────────────────────────────────
+   SHARED HELPERS
+───────────────────────────────────────────────────── */
+/* Subtle grid texture */
+.grid-bg {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size: 75px 75px;
+}
+
+/* Slide section label */
+.s-label {
+  font-family: var(--font-body);
+  font-size: clamp(.6rem,.78vw,.72rem);
+  letter-spacing: .28em; color: var(--gray-4); text-transform: uppercase;
+  margin-bottom: clamp(12px,1.8vh,22px);
+}
+.s-label .ac { color: var(--accent); }
+
+/* Chinese secondary text */
+.zh {
+  display: block; font-family: var(--font-body); font-weight: 300;
+  color: var(--gray-5); letter-spacing: .08em;
+  font-size: clamp(.72rem,.98vw,.92rem); margin-top: 5px;
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 01 — COVER
+   Two-column: 55% text | 45% big logo
+═══════════════════════════════════════════════════ */
+#s1 {
+  display: grid; grid-template-columns: 55% 45%;
+  align-items: stretch;
+}
+#s1 .left {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--pad); position: relative; z-index: 2;
+}
+#s1 .right {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+#s1 .right::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(217,119,87,.05) 0%, transparent 70%);
+}
+#s1 .right .big-logo {
+  position: relative; z-index: 1;
+  width: clamp(160px,26vw,340px); opacity: .88;
+}
+
+#s1 .eyebrow {
+  display: flex; align-items: center; gap: 12px;
+  font-size: clamp(.6rem,.78vw,.72rem); letter-spacing: .28em;
+  color: var(--accent); text-transform: uppercase;
+  margin-bottom: clamp(16px,2.8vh,30px);
+}
+#s1 .eyebrow::before { content: ''; width: 28px; height: 1px; background: var(--accent); }
+
+/* Title — Bebas Neue, large, all white including "FADE" */
+#s1 h1 {
+  font-family: var(--font-disp);
+  font-size: clamp(3.6rem,8.5vw,10rem);
+  line-height: .92; letter-spacing: .04em;
+  color: var(--white);
+  margin-bottom: clamp(12px,1.8vh,20px);
+  white-space: nowrap;
+}
+/* "FADE" explicitly white — no colour override */
+#s1 h1 .fade-word { color: var(--white); }
+
+#s1 .tagline {
+  font-family: var(--font-serif); font-style: italic;
+  font-size: clamp(.95rem,1.45vw,1.22rem);
+  color: var(--gray-7); font-weight: 300; line-height: 1.65;
+  border-left: 1px solid var(--accent-bdr); padding-left: 16px;
+  margin-bottom: clamp(24px,4vh,40px);
+}
+#s1 .tagline .zh { font-style: normal; color: var(--gray-5); }
+
+#s1 .meta {
+  display: flex; gap: clamp(18px,3vw,40px);
+  border-top: 1px solid var(--gray-3);
+  padding-top: clamp(14px,2.5vh,24px);
+}
+#s1 .meta-lbl {
+  font-size: clamp(.56rem,.72vw,.66rem);
+  letter-spacing: .2em; color: var(--gray-4);
+  text-transform: uppercase; margin-bottom: 4px;
+}
+#s1 .meta-val {
+  font-size: clamp(.78rem,1.05vw,.96rem);
+  color: var(--gray-7); font-weight: 300;
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 02 — WHAT WE DO
+   Full-bleed background image, 4-column pillar grid
+═══════════════════════════════════════════════════ */
+/* #s2 inherits position:absolute from .slide — do not override */
+#s2 { justify-content: center; }
+
+#s2 .bg-img {
+  position: absolute; inset: 0; z-index: 0;
+  background: url('https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/817f57cd-5cbd-4956-a9e3-82229d588f3a/Screenshot+2026-03-29+at+10.59.44%E2%80%AFPM.png?content-type=image%2Fpng')
+    center / cover no-repeat;
+  filter: brightness(.6) saturate(.9);
+}
+#s2 .bg-img::after {
+  content: ''; position: absolute; inset: 0; background: rgba(8,8,8,.72);
+}
+
+#s2 .s2-content {
+  position: relative; z-index: 1;
+  padding: var(--pad);
+  display: flex; flex-direction: column; justify-content: center;
+  flex: 1;
+}
+
+#s2 .hero {
+  font-family: var(--font-disp);
+  font-size: clamp(2.9rem,6.4vw,8.2rem);
+  line-height: .94; color: var(--white);
+  margin-bottom: clamp(28px,5vh,52px);
+}
+#s2 .hero .ac  { color: var(--accent); }
+#s2 .hero .zh-sub {
+  display: block; font-family: var(--font-body); font-weight: 300;
+  font-size: clamp(.75rem,1.05vw,.96rem);
+  color: var(--gray-5); letter-spacing: .1em; margin-top: 8px;
+}
+
+#s2 .pillars {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: clamp(10px,1.4vw,18px); max-width: min(100%,1000px);
+}
+#s2 .pillar {
+  border: 1px solid var(--gray-3);
+  padding: clamp(14px,2.2vh,24px) clamp(12px,1.5vw,18px);
+  transition: border-color .3s, background .3s; cursor: default;
+}
+#s2 .pillar:hover { border-color: var(--accent-bdr); background: var(--accent-dim); }
+#s2 .p-num {
+  font-family: var(--font-disp);
+  font-size: clamp(1.85rem,3.3vw,3.1rem);
+  color: var(--gray-4); line-height: 1;
+  margin-bottom: clamp(8px,1.2vh,14px);
+}
+#s2 .p-en {
+  font-size: clamp(.64rem,.84vw,.78rem);
+  font-weight: 500; color: var(--white);
+  letter-spacing: .12em; text-transform: uppercase; margin-bottom: 3px;
+}
+#s2 .p-zh {
+  font-size: clamp(.62rem,.82vw,.76rem);
+  color: var(--gray-5); margin-bottom: 8px;
+}
+#s2 .p-desc {
+  font-size: clamp(.66rem,.88vw,.84rem);
+  color: var(--gray-6); line-height: 1.68; font-weight: 300;
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 03 — OUR TEAM
+   Left-heavy content, right half = photo panel (v2 s2 style)
+═══════════════════════════════════════════════════ */
+#s3 {
+  display: grid; grid-template-columns: 55% 45%;
+  align-items: stretch;
+}
+/* Left: content */
+#s3 .left {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--pad); position: relative; z-index: 2;
+}
+/* Right: photo panel identical to v2 slide 02 right */
+#s3 .right {
+  position: relative; overflow: hidden;
+}
+#s3 .right img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  filter: brightness(.38) saturate(.55);
+}
+#s3 .right::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to right, var(--black) 0%, rgba(8,8,8,.15) 35%, transparent 100%);
+}
+
+#s3 h2 {
+  font-family: var(--font-disp);
+  font-size: clamp(2.1rem,4.7vw,5.7rem);
+  line-height: .94; color: var(--white);
+  margin-bottom: clamp(22px,4.5vh,42px);
+}
+#s3 h2 .zh-h {
+  display: block; font-family: var(--font-body); font-weight: 300;
+  font-size: clamp(.75rem,1.05vw,.96rem);
+  color: var(--gray-5); letter-spacing: .12em; margin-top: 6px;
+}
+
+#s3 .team-grid {
+  display: grid; grid-template-columns: repeat(2,1fr);  /* 2 cols fits left half */
+  gap: 1px; background: var(--gray-3); max-width: min(100%,620px);
+}
+#s3 .tc {
+  background: var(--black);
+  padding: clamp(13px,2vh,21px) clamp(13px,1.8vw,21px);
+  display: flex; align-items: flex-start; gap: 11px; cursor: default;
+  transition: background .3s, transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .3s;
+  border-top: 2px solid transparent;
+}
+#s3 .tc:hover {
+  background: rgba(217,119,87,.09);
+  transform: translateY(-5px);
+  box-shadow: 0 14px 36px rgba(0,0,0,.55);
+  border-top-color: var(--accent); z-index: 2;
+}
+#s3 .tc-icon {
+  width: clamp(26px,3.5vh,34px); height: clamp(26px,3.5vh,34px);
+  border-radius: 50%; border: 1px solid var(--accent-bdr);
+  background: var(--accent-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(9px,1.3vh,13px); flex-shrink: 0;
+  transition: transform .3s;
+}
+#s3 .tc:hover .tc-icon { transform: scale(1.15); }
+#s3 .tc-en {
+  font-size: clamp(.62rem,.84vw,.78rem); font-weight: 500; color: var(--white);
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap;
+}
+#s3 .tc-zh {
+  font-size: clamp(.6rem,.8vw,.74rem); color: var(--gray-5); margin-bottom: 4px; white-space: nowrap;
+}
+#s3 .tc-org {
+  font-size: clamp(.58rem,.78vw,.72rem); color: var(--accent); letter-spacing: .1em; white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 04 — ATHLETES
+   (untouched from v8 — do not modify)
+═══════════════════════════════════════════════════ */
+#s4 {
+  display: grid; grid-template-columns: 55% 45%; align-items: stretch;
+}
+#s4 .left {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--pad); position: relative; z-index: 2;
+}
+#s4 .right { position: relative; overflow: hidden; }
+#s4 .right img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: right center;
+  filter: brightness(.28) saturate(.45);
+}
+#s4 .right::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to right, var(--black) 0%, rgba(8,8,8,.08) 35%, transparent 100%);
+}
+
+#s4 h2 {
+  font-family: var(--font-disp);
+  font-size: clamp(1.85rem,3.9vw,4.6rem);
+  line-height: .94; color: var(--white);
+  margin-bottom: clamp(22px,4vh,38px);
+}
+#s4 h2 .zh-h {
+  display: block; font-family: var(--font-body); font-weight: 300;
+  font-size: clamp(.72rem,.95vw,.9rem); color: var(--gray-5);
+  letter-spacing: .12em; margin-top: 6px;
+}
+#s4 .athletes { display: flex; flex-direction: column; }
+#s4 .athlete {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: clamp(11px,1.8vh,17px) 0; border-bottom: 1px solid var(--gray-3);
+  transition: padding-left .3s, border-color .3s; cursor: default;
+}
+#s4 .athlete:first-child { border-top: 1px solid var(--gray-3); }
+#s4 .athlete:hover { padding-left: 10px; border-color: var(--gray-4); }
+#s4 .athlete:hover .a-en { color: var(--accent); }
+#s4 .a-en {
+  font-family: var(--font-disp);
+  font-size: clamp(1.15rem,2.1vw,2rem);
+  color: var(--white); letter-spacing: .04em; transition: color .3s;
+}
+#s4 .a-zh {
+  font-size: clamp(.75rem,1vw,.94rem); color: var(--gray-6); font-weight: 300; letter-spacing: .12em;
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 05 — WHY IT MATTERS
+═══════════════════════════════════════════════════ */
+/* NOTE: .slide already sets position:absolute — do NOT add position:relative here */
+#s5 .s5-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background: url('https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/dc8b7b63-f215-427d-b522-fa6a531ff3ca/basketball-court-1300x700.webp?content-type=image%2Fwebp')
+    center / cover no-repeat;
+  filter: brightness(.45) saturate(.55);
+}
+#s5 .s5-bg::after {
+  content: ''; position: absolute; inset: 0; background: rgba(8,8,8,.6);
+}
+#s5 .s5-content {
+  position: relative; z-index: 1;
+  flex: 1;
+  padding: var(--pad);
+  display: flex; flex-direction: column; justify-content: center;
+}
+#s5 h2 {
+  font-family: var(--font-disp);
+  font-size: clamp(2.1rem,4.7vw,5.7rem);
+  line-height: .94; color: var(--white);
+  margin-bottom: clamp(22px,4.5vh,44px);
+}
+#s5 h2 .zh-h {
+  display: block; font-family: var(--font-body); font-weight: 300;
+  font-size: clamp(.75rem,1.05vw,.96rem); color: var(--gray-5);
+  letter-spacing: .12em; margin-top: 6px;
+}
+#s5 .why-list { display: flex; flex-direction: column; max-width: min(100%,800px); }
+#s5 .why-item {
+  display: flex; gap: clamp(18px,2.8vw,30px); align-items: flex-start;
+  padding: clamp(14px,2.5vh,24px) 0; border-bottom: 1px solid var(--gray-3);
+}
+#s5 .why-item:first-child { border-top: 1px solid var(--gray-3); }
+#s5 .w-arr { font-size: clamp(.95rem,1.65vw,1.45rem); color: var(--accent); min-width: 18px; line-height: 1.7; }
+#s5 .w-en  { font-size: clamp(.78rem,1.05vw,.96rem); font-weight: 500; color: var(--white); margin-bottom: 2px; }
+#s5 .w-zh  { font-size: clamp(.68rem,.9vw,.84rem); color: var(--gray-5); margin-bottom: 6px; }
+#s5 .w-desc { font-size: clamp(.68rem,.9vw,.84rem); color: var(--gray-6); font-weight: 300; line-height: 1.78; }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 06 — CLOSING
+   Exact v2 s10 layout — centered column, rings bg
+   PLAYERS=white  SYSTEMS=accent
+═══════════════════════════════════════════════════ */
+#s6 {
+  /* flex column, centered — DO NOT use align-items/justify-content on #s6
+     because the .close-wrap needs to fill 100% and center itself */
+  flex-direction: column;
+}
+
+/* Rings decorative background — absolutely positioned inside slide */
+#s6 .rings {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 0;
+}
+#s6 .ring {
+  position: absolute; border-radius: 50%;
+  border: 1px solid rgba(217,119,87,.07);
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  animation: ringPulse 4.5s ease-in-out infinite;
+}
+#s6 .ring:nth-child(1) { width: 52vmin; height: 52vmin; animation-delay: 0s; }
+#s6 .ring:nth-child(2) { width: 73vmin; height: 73vmin; animation-delay: .9s;  border-color: rgba(217,119,87,.04); }
+#s6 .ring:nth-child(3) { width: 94vmin; height: 94vmin; animation-delay: 1.8s; border-color: rgba(217,119,87,.02); }
+@keyframes ringPulse {
+  0%,100% { opacity: .5; transform: translate(-50%,-50%) scale(1); }
+  50%      { opacity: 1;  transform: translate(-50%,-50%) scale(1.02); }
+}
+
+/* The centred content wrapper */
+#s6 .close-wrap {
+  position: relative; z-index: 1;
+  flex: 1;                /* fill available height */
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: var(--pad);
+}
+
+#s6 .c-pre {
+  font-size: clamp(.52rem,.7vw,.65rem);
+  letter-spacing: .3em; color: var(--gray-4); text-transform: uppercase;
+  margin-bottom: clamp(18px,3.5vh,34px);
+}
+#s6 .c-logo {
+  margin-bottom: clamp(18px,3.5vh,34px);
+}
+#s6 .c-logo img {
+  height: clamp(40px,7vh,70px); width: auto; filter: brightness(.9);
+}
+#s6 h2 {
+  font-family: var(--font-disp);
+  font-size: clamp(2.2rem,5.5vw,7rem);
+  line-height: 1; color: var(--white);
+  margin-bottom: 0;
+}
+#s6 h2 .players { color: var(--white); }    /* PLAYERS = white */
+#s6 h2 .systems { color: var(--accent); }   /* SYSTEMS = #d97757 */
+#s6 .c-zh {
+  font-size: clamp(.75rem,1.05vw,.96rem);
+  color: var(--gray-5); letter-spacing: .15em; font-weight: 300;
+  margin: clamp(12px,2.5vh,22px) 0 clamp(18px,3.5vh,32px);
+}
+#s6 .c-sub {
+  font-size: clamp(.75rem,1.05vw,.96rem);
+  color: var(--gray-6); font-weight: 300; line-height: 1.8; max-width: 520px;
+}
+#s6 .c-sub .zh-b {
+  display: block; color: var(--gray-5); margin-top: 6px;
+  font-size: clamp(.67rem,.9vw,.82rem);
+}
+#s6 .c-line {
+  width: 1px; height: clamp(32px,6vh,52px);
+  background: var(--accent-bdr); margin: clamp(16px,3vh,26px) auto;
+}
+#s6 .c-foot {
+  font-size: clamp(.5rem,.68vw,.62rem);
+  color: var(--gray-4); letter-spacing: .22em; text-transform: uppercase;
+}
+
+/* ─────────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────────── */
+@media (max-height: 700px) {
+  :root { --pad: clamp(1.2rem,3vw,2.5rem); }
+}
+@media (max-height: 600px) {
+  :root { --pad: clamp(.8rem,2.5vw,1.8rem); }
+  .nav-dots, .confidential { display: none; }
+  #s2 .pillars { grid-template-columns: repeat(2,1fr); }
+  #s3 .team-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  #s1, #s3, #s4 { grid-template-columns: 1fr; }
+  #s1 .right, #s3 .right, #s4 .right { display: none; }
+  #s2 .pillars { grid-template-columns: repeat(2,1fr); }
+  #s3 .team-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
+}
+</style>
+</head>
+<body class="on-s1">
+
+<!-- ── FIXED CHROME ─────────────────────────────────── -->
+<div class="progress-bar" id="progressBar"></div>
+
+<div class="logo-tl">
+  <img src="https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/196c69b4-5aa8-4a5d-a151-bfd25db36982/just_fade_academy_watermark_30.PNG?content-type=image%2Fpng" alt="JFA">
+</div>
+<div class="logo-tr">
+  <img src="https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/196c69b4-5aa8-4a5d-a151-bfd25db36982/just_fade_academy_watermark_30.PNG?content-type=image%2Fpng" alt="JFA">
+</div>
+
+<div class="confidential">JUST FADE ACADEMY &nbsp;|&nbsp; Confidential &nbsp;内部文件</div>
+<div class="counter" id="counter">01 / 06</div>
+<nav class="nav-dots" id="navDots"></nav>
+
+<div class="nav-arrows">
+  <button class="arw" onclick="navigate(-1)">↑</button>
+  <button class="arw" onclick="navigate(1)">↓</button>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     S01 — COVER
+══════════════════════════════════════════════════ -->
+<section class="slide active" id="s1">
+  <div class="left">
+    <div class="eyebrow reveal d1">Los Angeles · Est. 2023</div>
+    <h1 class="reveal d2">JUST <span class="fade-word">FADE</span> ACADEMY</h1>
+    <p class="tagline reveal d3">
+      Elite Basketball Development Platform Bridging China &amp; the U.S.
+      <span class="zh">连接中美的高端篮球发展平台</span>
+    </p>
+    <div class="meta reveal d4">
+      <div>
+        <div class="meta-lbl">Founder / 创始人</div>
+        <div class="meta-val">Yan Xuan</div>
+      </div>
+      <div>
+        <div class="meta-lbl">HQ / 总部</div>
+        <div class="meta-val">Los Angeles, CA</div>
+      </div>
+      <div>
+        <div class="meta-lbl">Founded / 成立</div>
+        <div class="meta-val">2023</div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <img class="big-logo reveal d3"
+         src="https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/196c69b4-5aa8-4a5d-a151-bfd25db36982/just_fade_academy_watermark_30.PNG?content-type=image%2Fpng"
+         alt="Just Fade Academy">
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     S02 — WHAT WE DO
+══════════════════════════════════════════════════ -->
+<section class="slide" id="s2">
+  <div class="bg-img"></div>
+  <div class="s2-content">
+    <div class="s-label reveal d1"><span class="ac">01</span> — What We Do / 我们做什么</div>
+    <div class="hero reveal d2">
+      A <span class="ac">System</span>, not a camp.
+      <span class="zh-sub">一套体系，而非一个训练营</span>
+    </div>
+    <div class="pillars reveal d3">
+      <div class="pillar">
+        <div class="p-num">01</div>
+        <div class="p-en">Skill Training</div>
+        <div class="p-zh">篮球专项训练</div>
+        <div class="p-desc">Individualized technical programs built around each player's position, strengths, and specific development needs.</div>
+      </div>
+      <div class="pillar">
+        <div class="p-num">02</div>
+        <div class="p-en">Body &amp; Performance</div>
+        <div class="p-zh">身体与运动表现</div>
+        <div class="p-desc">NBA/NFL-caliber strength, speed, and explosion programming — optimized for basketball demands.</div>
+      </div>
+      <div class="pillar">
+        <div class="p-num">03</div>
+        <div class="p-en">Game Transfer</div>
+        <div class="p-zh">训练转化实战</div>
+        <div class="p-desc">Tailored, high-level competitive matching environments where athletes compete with NBA and overseas players to convert training into real game performance.</div>
+      </div>
+      <div class="pillar">
+        <div class="p-num">04</div>
+        <div class="p-en">Mind &amp; Recovery</div>
+        <div class="p-zh">精神力培养和恢复与治疗</div>
+        <div class="p-desc">Elite mentality development, cultural integration, advanced nutrition planning, physical therapy, recovery optimization, and comprehensive long-term career support.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     S03 — OUR TEAM
+══════════════════════════════════════════════════ -->
+<section class="slide" id="s3">
+  <div class="left">
+    <div class="s-label reveal d1"><span class="ac">02</span> — Our Team / 美国团队</div>
+    <h2 class="reveal d2">
+      BUILT FOR THIS LEVEL
+      <span class="zh-h">为顶尖水平而生的专业团队</span>
+    </h2>
+    <div class="team-grid reveal d3">
+      <div class="tc">
+        <div class="tc-icon">🏀</div>
+        <div>
+          <div class="tc-en">Player Development Coaches</div>
+          <div class="tc-zh">球员发展教练团队</div>
+          <div class="tc-org">Multi-background · Specialized</div>
+        </div>
+      </div>
+      <div class="tc">
+        <div class="tc-icon">📊</div>
+        <div>
+          <div class="tc-en">NBA Game Analyst</div>
+          <div class="tc-zh">NBA官方比赛分析师</div>
+          <div class="tc-org">Official NBA Film &amp; Analytics</div>
+        </div>
+      </div>
+      <div class="tc">
+        <div class="tc-icon">🩺</div>
+        <div>
+          <div class="tc-en">Sports Medicine PhD</div>
+          <div class="tc-zh">运动医学博士</div>
+          <div class="tc-org">USC — Kinesiology</div>
+        </div>
+      </div>
+      <div class="tc">
+        <div class="tc-icon">⚡</div>
+        <div>
+          <div class="tc-en">S&amp;C Coach</div>
+          <div class="tc-zh">力量体能训练师</div>
+          <div class="tc-org">NBA / NFL Experience</div>
+        </div>
+      </div>
+      <div class="tc">
+        <div class="tc-icon">🥗</div>
+        <div>
+          <div class="tc-en">Sports Nutrition Researcher</div>
+          <div class="tc-zh">运动营养学研究员</div>
+          <div class="tc-org">UCLA — Performance Nutrition</div>
+        </div>
+      </div>
+      <div class="tc">
+        <div class="tc-icon">🤸</div>
+        <div>
+          <div class="tc-en">Physical Therapist</div>
+          <div class="tc-zh">物理治疗师</div>
+          <div class="tc-org">Team USA / NFL Combine Partner</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <img src="https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/a2c0efac-9189-4faa-9f88-1c8157d174aa/Large-9.webp?content-type=image%2Fwebp"
+         alt="Training" loading="lazy">
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     S04 — ATHLETES
+══════════════════════════════════════════════════ -->
+<section class="slide" id="s4">
+  <div class="left">
+    <div class="s-label reveal d1"><span class="ac">03</span> — Athletes / 合作球员</div>
+    <h2 class="reveal d2">
+      WHO WE<br>WORK WITH
+      <span class="zh-h">合作的中国球员（部分）</span>
+    </h2>
+    <div class="athletes">
+      <div class="athlete reveal d3"><div class="a-en">HU MINGXUAN</div><div class="a-zh">胡明轩</div></div>
+      <div class="athlete reveal d3"><div class="a-en">LIN WEI</div><div class="a-zh">林葳</div></div>
+      <div class="athlete reveal d4"><div class="a-en">HE XINING</div><div class="a-zh">贺希宁</div></div>
+      <div class="athlete reveal d4"><div class="a-en">ZENG FANBO</div><div class="a-zh">曾凡博</div></div>
+      <div class="athlete reveal d5"><div class="a-en">LU WENBO</div><div class="a-zh">陆文博</div></div>
+    </div>
+  </div>
+  <div class="right">
+    <img src="https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/14b65f2a-16a8-42ee-9427-05032e0464bf/2474_LAAC_Lockers_0013-1300x700.webp?content-type=image%2Fwebp"
+         alt="Locker room" loading="lazy">
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     S05 — WHY IT MATTERS
+══════════════════════════════════════════════════ -->
+<section class="slide" id="s5">
+  <div class="s5-bg"></div>
+  <div class="s5-content">
+    <div class="s-label reveal d1"><span class="ac">04</span> — Why It Matters / 为什么重要</div>
+    <h2 class="reveal d2">
+      THE BIGGER PICTURE
+      <span class="zh-h">更大的意义与图景</span>
+    </h2>
+    <div class="why-list">
+      <div class="why-item reveal d3">
+        <div class="w-arr">→</div>
+        <div>
+          <div class="w-en">Bridging Two Basketball Worlds</div>
+          <div class="w-zh">搭建中美篮球世界的真实桥梁</div>
+          <div class="w-desc">China's top players deserve direct access to the highest level of the sport. We build that bridge — not just exposure, but genuine integration into elite environments and ecosystems.</div>
+        </div>
+      </div>
+      <div class="why-item reveal d4">
+        <div class="w-arr">→</div>
+        <div>
+          <div class="w-en">A Scalable, Replicable Development Model</div>
+          <div class="w-zh">可复制、可规模化的中国球员发展模型</div>
+          <div class="w-desc">Our experience and philosophy can be integrated into a universal, replicable, and scalable development model for Chinese players — supporting more athletes at every level.</div>
+        </div>
+      </div>
+      <div class="why-item reveal d5">
+        <div class="w-arr">→</div>
+        <div>
+          <div class="w-en">From Pro Prep to Advancing Career</div>
+          <div class="w-zh">从职业备战到生涯进阶</div>
+          <div class="w-desc">From Pro Prep to Advancing career, we manage the full arc — a complete pathway from development to professional basketball.
+            <span style="display:block;margin-top:4px;font-size:clamp(.64rem,.86vw,.8rem);color:var(--gray-5);">从职业备战到生涯进阶，我们管理球员发展的完整弧线—从成长到职业篮球的完整路径。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     S06 — CLOSING
+══════════════════════════════════════════════════ -->
+<section class="slide" id="s6">
+  <!-- Decorative rings — absolutely inside slide -->
+  <div class="rings">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+  </div>
+  <!-- Content wrapper fills height and centres everything -->
+  <div class="close-wrap">
+    <div class="c-pre reveal d1">Just Fade Academy · Los Angeles</div>
+    <div class="c-logo reveal d2">
+      <img src="https://images.squarespace-cdn.com/content/649a1ebfd8531f2969e03ac2/22dcdb05-6817-4d39-94cb-aed9970604fb/IMG_3783.PNG?content-type=image%2Fpng"
+           alt="Just Fade Academy">
+    </div>
+    <h2 class="reveal d3">
+      WE DON'T JUST TRAIN <span class="players">PLAYERS</span><br>
+      WE BUILD <span class="systems">SYSTEMS.</span>
+    </h2>
+    <div class="c-zh reveal d4">我们不只是训练球员 — 我们构建体系</div>
+    <p class="c-sub reveal d5">
+      A platform built to be partnered with, scaled with,<br>and trusted at the highest level of the game.
+      <span class="zh-b">一个值得合作、可以放大、可以在最高级别信赖的平台。</span>
+    </p>
+    <div class="c-line reveal d5"></div>
+    <div class="c-foot reveal d6">JUST FADE ACADEMY · Los Angeles, California</div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  const TITLES = [
+    'Cover · 封面',
+    'What We Do · 我们做什么',
+    'Our Team · 美国团队',
+    'Athletes · 合作球员',
+    'Why It Matters · 为什么重要',
+    'Closing · 结语'
+  ];
+
+  const slides   = Array.from(document.querySelectorAll('.slide'));
+  const total    = slides.length;
+  let cur        = 0;
+  let locked     = false;
+  const LOCK     = 800;   /* ms between transitions */
+  const WGAP     = 1000;  /* ms minimum between wheel events */
+  let wLast      = 0;
+
+  const bar    = document.getElementById('progressBar');
+  const ctr    = document.getElementById('counter');
+  const dotsEl = document.getElementById('navDots');
+
+  /* Build dots */
+  TITLES.forEach((t, i) => {
+    const d = document.createElement('button');
+    d.className = 'nd' + (i === 0 ? ' active' : '');
+    d.setAttribute('data-title', t);
+    d.setAttribute('aria-label', t);
+    d.onclick = () => go(i);
+    dotsEl.appendChild(d);
+  });
+
+  function ui(i) {
+    document.querySelectorAll('.nd').forEach((d, j) => d.classList.toggle('active', j === i));
+    ctr.textContent = String(i + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    bar.style.width = ((i + 1) / total * 100) + '%';
+    document.body.classList.toggle('on-s1', i === 0);
+  }
+
+  function go(idx) {
+    if (locked || idx === cur || idx < 0 || idx >= total) return;
+    locked = true;
+
+    const prev = slides[cur];
+    const next = slides[idx];
+    const dir  = idx > cur ? 1 : -1;
+
+    /* Exit current slide */
+    prev.classList.remove('active');
+    prev.classList.add(dir > 0 ? 'exit-up' : 'exit-down');
+
+    /* Snap next slide to enter-from position, then animate in */
+    next.style.transition = 'none';
+    next.style.opacity    = '0';
+    next.style.transform  = `translateY(${dir > 0 ? 40 : -40}px)`;
+    next.getBoundingClientRect(); /* force reflow */
+    next.style.transition = '';
+    next.style.opacity    = '';
+    next.style.transform  = '';
+    next.classList.add('active');
+
+    cur = idx;
+    ui(idx);
+
+    setTimeout(() => {
+      prev.classList.remove('exit-up', 'exit-down');
+      locked = false;
+    }, LOCK);
+  }
+
+  /* Init */
+  ui(0);
+
+  /* Keyboard */
+  document.addEventListener('keydown', e => {
+    if ([' ', 'ArrowDown', 'ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key))           { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') { e.preventDefault(); go(0); }
+    if (e.key === 'End')  { e.preventDefault(); go(total - 1); }
+  });
+
+  /* Wheel — strict time gate */
+  document.addEventListener('wheel', e => {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - wLast < WGAP) return;
+    wLast = now;
+    go(cur + (e.deltaY > 0 ? 1 : -1));
+  }, { passive: false });
+
+  /* Touch */
+  let ty = 0, tt = 0;
+  document.addEventListener('touchstart', e => { ty = e.touches[0].clientY; tt = Date.now(); }, { passive: true });
+  document.addEventListener('touchend',   e => {
+    const dy = ty - e.changedTouches[0].clientY;
+    if (Math.abs(dy) > 50 && Date.now() - tt < 500) go(cur + (dy > 0 ? 1 : -1));
+  }, { passive: true });
+
+  /* Arrow buttons */
+  window.navigate = d => go(cur + d);
+
+}());
+</script>
+</body>
+</html>
